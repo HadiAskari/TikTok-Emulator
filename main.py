@@ -9,12 +9,11 @@ def init_device():
     device.install_apk('/home/mharoon/Downloads/TikTok_27.1.3_Apkpure.apk')
 
     # launch tiktok app
-    # device.launch_app('com.ss.android.ugc.trill')
+    device.launch_app('com.ss.android.ugc.trill')
 
     # wait for app to load
-    # sleep(5)
+    sleep(5)
 
-    # return device
     return device
 
 
@@ -52,13 +51,27 @@ def login(device, username, password):
     device.tap(coords)
 
 
-device = init_device()
-print("VNC link:", device.get_vnc_link())
-# login(device, 'auditshorts1@gmail.com', 'ytshortstiktok123!')
+def audit(device):
+    # swipe over video
+    for i in range(100):
+        xml = device.get_xml()
+        
+        # play/pause video
+        device.tap((200, 200))
 
-# def main():
-#     try:
-#     finally:
+        # swipe to next video
+        device.swipe((200, 500), (200, 0))
 
-# if __name__ == '__main__':
-#     main()
+
+
+def main():
+    device = init_device()
+    print("VNC link:", device.get_vnc_link())
+    try:
+        login(device, 'auditshorts1@gmail.com', 'ytshortstiktok123!')
+        audit(device)
+    finally:
+        device.shutdown()
+
+if __name__ == '__main__':
+    main()

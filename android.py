@@ -12,7 +12,7 @@ class Android:
         # print vnc url
         return f'http://localhost:{self.__vnc_port}/'
 
-    def find_element(self, attrs):
+    def get_xml(self):
         # grab page xml
         out = randint(10000, 99999)
         self.__device.shell('uiautomator dump /sdcard/%s.xml' % out)
@@ -20,8 +20,11 @@ class Android:
         
         # extract element from page xml
         with open('xml/%s.xml' % out) as f:
-            soup = BeautifulSoup(f.read(), 'xml')
-            return soup.find('node', attrs=attrs)
+            return f.read()
+        
+    def find_element(self, attrs):
+        soup = BeautifulSoup(self.get_xml(), 'xml')
+        return soup.find('node', attrs=attrs)
 
     def get_coordinates(self, node):
         # grab bounding box of node
@@ -32,6 +35,9 @@ class Android:
     def tap(self, coords):
         # tap a certain coordinate
         self.__device.shell('input tap %d %d' % coords)
+
+    def swipe(self, start, end):
+        self.__device.shell('input swipe %s %s %s %s' % (start[0], start[1], end[0], end[1]))
 
     def type_text(self, text):
         # tap in text
