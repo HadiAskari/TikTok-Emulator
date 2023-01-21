@@ -8,16 +8,11 @@ def init_device():
     # install tiktok apk
     device.install_apk('/home/mharoon/Downloads/TikTok_27.1.3_Apkpure.apk')
 
-    # install vpn apk
-    # device.install_apk('/home/mharoon/Downloads/SuperVPN Fast VPN Client_2.8.1_Apkpure.apk')
-
-    input("Start VPN>")
-
     # launch tiktok app
-    device.launch_app('com.ss.android.ugc.trill')
+    # device.launch_app('com.ss.android.ugc.trill')
 
     # wait for app to load
-    sleep(5)
+    # sleep(5)
 
     # return device
     return device
@@ -59,8 +54,7 @@ def login(device, username, password):
 
 device = init_device()
 print("VNC link:", device.get_vnc_link())
-input("Continue?")
-login(device, 'auditshorts1@gmail.com', 'ytshortstiktok123!')
+# login(device, 'auditshorts1@gmail.com', 'ytshortstiktok123!')
 
 # def main():
 #     try:

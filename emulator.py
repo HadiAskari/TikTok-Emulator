@@ -14,12 +14,13 @@ def emulate_new_device():
     # setup necessary host ports and environment vars
     ports = { 
         "6080/tcp": get_next_available_port(6080), 
-        "5555/tcp": get_next_available_port(5555)
+        "5555/tcp": get_next_available_port(5555),
+        "5554/tcp": get_next_available_port(7000)
     }
 
     environment = {
-        "DEVICE": "Samsung Galaxy S6", 
-        "DATAPARTITION": "2000m"
+        "DEVICE": "Nexus 5", 
+        "DATAPARTITION": "3000m"
     }
 
     # spawn container
