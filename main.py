@@ -1,9 +1,7 @@
 from time import sleep
-from emulator import emulate_new_device
+from emulator import emulate_new_device, get_connected_devices
 
-def init_device():
-    # emulate a new device
-    device = emulate_new_device()
+def init_device(device):
 
     # install tiktok apk
     device.install_apk('/home/mharoon/Downloads/TikTok_27.1.3_Apkpure.apk')
@@ -50,6 +48,9 @@ def login(device, username, password):
     coords = device.get_coordinates(elem)
     device.tap(coords)
 
+def swipe_up(device):
+    # swipe to next video
+    device.swipe((200, 500), (200, 0))
 
 def audit(device):
     # swipe over video
@@ -59,19 +60,18 @@ def audit(device):
         # play/pause video
         device.tap((200, 200))
 
-        # swipe to next video
-        device.swipe((200, 500), (200, 0))
+
+#device = emulate_new_device()
+device = get_connected_devices()[0]
+init_device(device)
+login(device, 'auditshorts1@gmail.com', 'ytshortstiktok123!')
 
 
+#def main():
+#    print("VNC link:", device.get_vnc_link())
+#    try:
+#    finally:
+#        device.shutdown()
 
-def main():
-    device = init_device()
-    print("VNC link:", device.get_vnc_link())
-    try:
-        login(device, 'auditshorts1@gmail.com', 'ytshortstiktok123!')
-        audit(device)
-    finally:
-        device.shutdown()
-
-if __name__ == '__main__':
-    main()
+#if __name__ == '__main__':
+#    main()
