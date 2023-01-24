@@ -41,8 +41,11 @@ class Android:
 
     def type_text(self, text):
         # tap in text
-        text = text.replace(' ', '%s')
-        self.__device.shell('input text %s' % text)
+        if type(text) == str:
+            text = text.replace(' ', '%s')
+            self.__device.shell('input text %s' % text)
+        elif type(text) == int:
+            self.__device.shell('input keyevent %s' % text)
 
     def install_apk(self, path_to_apk):
         self.__device.install(path_to_apk)

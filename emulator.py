@@ -41,8 +41,8 @@ def emulate_new_device():
     return Android(device=adb_client.device(f"{ container.attrs['NetworkSettings']['IPAddress'] }:5555"), container=container, vnc_port=ports["6080/tcp"])
 
 
-def connect_to_existing_device(ip, port):
-    pass
+def get_connected_devices():
+    return [Android(dev, None, None) for dev in adb_client.devices()]
 
 def get_next_available_port(starting):
     for port in range(starting, starting + 1000):
