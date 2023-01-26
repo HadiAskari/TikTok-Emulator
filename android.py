@@ -21,6 +21,25 @@ class Android:
         # extract element from page xml
         with open('xml/%s.xml' % out) as f:
             return f.read()
+
+    def get_xml_file(self):
+        # grab page xml
+        out = randint(10000, 99999)
+        self.__device.shell('uiautomator dump /sdcard/%s.xml' % out)
+        self.__device.pull('/sdcard/%s.xml' % out, 'xml/%s.xml' % out)
+        
+        # extract element from page xml
+        return 'xml/%s.xml' % out
+    
+    def get_xml_vid(self, run, reason):
+        # grab page xml
+        out = randint(10000, 99999)
+        self.__device.shell('uiautomator dump /sdcard/%s.xml' % out)
+        self.__device.pull('/sdcard/%s.xml' % out, 'xml/%s/%s/%s.xml' % (run,reason,out))
+        
+        # extract element from page xml
+        with open('xml/%s/%s/%s.xml' % (run,reason,out)) as f:
+            return f.read()
         
     def find_element(self, attrs):
         soup = BeautifulSoup(self.get_xml(), 'xml')
@@ -52,6 +71,9 @@ class Android:
 
     def launch_app(self, package_name):
         self.__device.shell(f'monkey -p {package_name} 1')
+
+    def kill_app(self, package_name):
+        self.__device.shell(f'am force-stop {package_name}')        
 
     def shutdown(self):
         self.__container.kill()
