@@ -165,10 +165,8 @@ if __name__ == '__main__':
     print(credentials)
     
     device = emulate_new_device(credentials.name)
-
     print("VNC link:", device.get_vnc_link())
-    # device = get_connected_devices()[0]
-
+    
     install_apks(device)
     configure_keyboard(device)
     restart_app(device)
@@ -181,5 +179,4 @@ if __name__ == '__main__':
     pd.DataFrame(training_data).to_csv(f'training/{credentials.name}.csv', index=False)
     pd.DataFrame(testing_data).to_csv(f'testing/{credentials.name}.csv', index=False)
     
-
     device.shutdown()
