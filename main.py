@@ -2,12 +2,13 @@ from argparse import ArgumentParser
 from random import randint
 from time import sleep
 import util
-from emulator import emulate_new_device
+from emulator import emulate_new_device, get_connected_devices
 from collections import namedtuple
 import screens
 import os
 import pandas as pd
 import json
+import re
 
 def parse_args():
     args = ArgumentParser()
@@ -24,7 +25,9 @@ def generate_credentials(q):
 
 def install_apks(device):
     for apk in os.listdir('apks'):
-        device.install_apk(os.path.join('apks', apk))
+        if apk.endswith('.apk'):
+            print(os.path.join('apks', apk))
+            device.install_apk(os.path.join('apks', apk))
 
 def configure_keyboard(device):
     device.set_keyboard('io.github.visnkmr.nokeyboard/.IMEService')
@@ -32,7 +35,7 @@ def configure_keyboard(device):
 def restart_app(device):
     device.kill_app('com.ss.android.ugc.trill')
     device.launch_app('com.ss.android.ugc.trill')
-    sleep(5)
+    sleep(10)
 
 def signup_controller(device, credentials):
     while True:
@@ -57,23 +60,32 @@ def signup_controller(device, credentials):
         elif "Create password" in xml:
             screens.password_screen(device, credentials.password)
         elif "Create nickname" in xml:
-            screens.nickname_screen(device)
+            screens.skip_screen(device)
         elif "Choose your interests" in xml:
-            screens.interests_screen(device)
-        elif 'access your contacts?' in xml:
+            screens.skip_screen(device)
+        elif "Account Privacy" in xml and "Skip" in xml:
+            screens.skip_screen(device)
+        elif "Enter phone number" in xml and "Skip" in xml:
+            screens.skip_screen(device)
+        elif "What languages" in xml and "Confirm" in xml:
+            screens.confirm_screen(device)
+        elif "access your contacts?" in xml:
             screens.permissions_screen(device)
-        elif xml == '' or 'Swipe up' in xml:
-            util.play_pause(device)
+        elif xml == "" or "Swipe up" in xml:
             util.swipe_up(device)
-        elif 'Profile' in xml:
-            util.tap_on(device, attrs={'text': 'Profile'})
-            if 'Add bio' in xml:
+            sleep(5)
+            util.play_pause(device)
+        elif "Profile" in xml:
+            util.tap_on(device, attrs={'text': "Profile"})
+            if "Add bio" in xml or "Add friends" in xml:
                 print("Account created!")
                 break
-            elif 'Sign up for an account' in xml:
+            elif "Sign up for an account" in xml:
                 util.tap_on(device, attrs={'text': 'Sign up'})
 
 def train(device, query):
+    restart_app(device)
+
     # click on search button
     device.tap((1000, 120))
 
@@ -111,7 +123,7 @@ def train(device, query):
         except: pass
 
         # grab xml
-        text_elems = device.find_elements({'text': r'.+'})
+        text_elems = device.find_elements({'text': re.compile('.+')})
 
         # build row
         row = {}
@@ -120,6 +132,9 @@ def train(device, query):
 
         # append to training data
         training_data.append(row)
+
+        # swipe to next video
+        util.swipe_up(device)
 
     return training_data
 
@@ -137,33 +152,36 @@ def test(device, query):
         util.play_pause(device)
 
         # click on see more to reveal content
-        try:
-            util.tap_on(device, {'text': 'See more'})
-        except:
-            pass
+        try: util.tap_on(device, {'text': 'See more'})
+        except: pass
 
         # grab xml
-        text_elems = device.find_elements({'text': r'.+'})
+        text_elems = device.find_elements({'text': re.compile('.+')})
 
         # build row
         row = {}
         for el in text_elems:
             row[el['resource-id']] = el['text']
             # like video if it contains the query needed
-            row['liked'] = query in el['text']
-            if row['liked']:
+            if query in el['text']:
+                row['liked'] = True
                 # click on like and watch for longer
                 util.tap_on(device, {'content-desc': 'Like'})
+                util.tap_on(device, {'resource-id': 'com.ss.android.ugc.trill:id/c0o'})
                 sleep(10)
 
         # append to training data
         testing_data.append(row)
+
+        # swipe to next
+        util.swipe_up(device)
 
     return testing_data
 
 
 if __name__ == '__main__':
     args = parse_args()
+    
     credentials = generate_credentials(args.query)
     with open(f'credentials/{credentials.name}', 'w') as f:
         json.dump(credentials, f)
@@ -172,12 +190,17 @@ if __name__ == '__main__':
     
     device = emulate_new_device(credentials.name)
     print("VNC link:", device.get_vnc_link())
-    
-    try:
-        install_apks(device)
-        configure_keyboard(device)
-        restart_app(device)
 
+    print("Installing APKs...")
+    install_apks(device)
+
+    print("Configuring keyboard...")
+    configure_keyboard(device)
+    
+    print("Starting TikTok...")
+    restart_app(device)
+
+    try:
         print("Signing up...")
         signup_controller(device, credentials)
 
@@ -187,10 +210,13 @@ if __name__ == '__main__':
         print("Testing...")
         testing_data = test(device, args.query)
 
+        print("Saving...")
         pd.DataFrame(training_data).to_csv(f'training/{credentials.name}.csv', index=False)
         pd.DataFrame(testing_data).to_csv(f'testing/{credentials.name}.csv', index=False)
         
+        print("Shutting down...")
         device.shutdown()
     except Exception as e:
         print(e)
         device.screenshot(f'screenshots/{credentials.name}.png')
+        device.destroy()

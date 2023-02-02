@@ -25,11 +25,11 @@ def password_screen(device, password):
     util.lower_keyboard(device)
     util.tap_on(device, {'text': "Next"})
 
-def nickname_screen(device):
+def skip_screen(device):
     util.tap_on(device, {'text': "Skip"})
 
-def interests_screen(device):
-    util.tap_on(device, {'text': "Skip"})
+def confirm_screen(device):
+    util.tap_on(device, {'text': "Confirm"})
 
 def permissions_screen(device):
-    util.tap_on(device, {'text': 'Allow'})
+    util.tap_on(device, {'text': "Allow"})
