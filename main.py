@@ -2,11 +2,12 @@ from argparse import ArgumentParser
 from random import randint
 from time import sleep
 import util
-from emulator import emulate_new_device, get_connected_devices
+from emulator import emulate_new_device
 from collections import namedtuple
 import screens
 import os
 import pandas as pd
+import json
 
 def parse_args():
     args = ArgumentParser()
@@ -130,7 +131,7 @@ def test(device, query):
     testing_data = []
     for ind in range(5):
         # watch short for a certain time
-        sleep(5)
+        sleep(1)
 
         # pause video
         util.play_pause(device)
@@ -151,7 +152,9 @@ def test(device, query):
             # like video if it contains the query needed
             row['liked'] = query in el['text']
             if row['liked']:
+                # click on like and watch for longer
                 util.tap_on(device, {'content-desc': 'Like'})
+                sleep(10)
 
         # append to training data
         testing_data.append(row)
@@ -162,21 +165,32 @@ def test(device, query):
 if __name__ == '__main__':
     args = parse_args()
     credentials = generate_credentials(args.query)
+    with open(f'credentials/{credentials.name}', 'w') as f:
+        json.dump(credentials, f)
+        f.write('\n')
     print(credentials)
     
     device = emulate_new_device(credentials.name)
     print("VNC link:", device.get_vnc_link())
     
-    install_apks(device)
-    configure_keyboard(device)
-    restart_app(device)
+    try:
+        install_apks(device)
+        configure_keyboard(device)
+        restart_app(device)
 
-    signup_controller(device, credentials)
+        print("Signing up...")
+        signup_controller(device, credentials)
 
-    training_data = train(device, args.query)
-    testing_data = test(device, args.query)
+        print("Training...")
+        training_data = train(device, args.query)
 
-    pd.DataFrame(training_data).to_csv(f'training/{credentials.name}.csv', index=False)
-    pd.DataFrame(testing_data).to_csv(f'testing/{credentials.name}.csv', index=False)
-    
-    device.shutdown()
+        print("Testing...")
+        testing_data = test(device, args.query)
+
+        pd.DataFrame(training_data).to_csv(f'training/{credentials.name}.csv', index=False)
+        pd.DataFrame(testing_data).to_csv(f'testing/{credentials.name}.csv', index=False)
+        
+        device.shutdown()
+    except Exception as e:
+        print(e)
+        device.screenshot(f'screenshots/{credentials.name}.png')

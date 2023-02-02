@@ -90,3 +90,8 @@ class Android:
 
     def shutdown(self):
         self.__container.stop()
+
+    def screenshot(self, path):
+        result = self.__device.screencap()
+        with open(path, "wb") as fp:
+            fp.write(result)
