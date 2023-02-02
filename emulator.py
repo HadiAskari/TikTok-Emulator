@@ -10,7 +10,7 @@ from android import Android
 adb_client = AdbClient(host="127.0.0.1", port=5037)
 docker_client = docker.from_env()
 
-def emulate_new_device():
+def emulate_new_device(name):
     # setup necessary host ports and environment vars
     ports = { 
         "6080/tcp": get_next_available_port(6080), 
@@ -24,7 +24,7 @@ def emulate_new_device():
     }
 
     # spawn container
-    container = docker_client.containers.run('budtmo/docker-android-x86-12.0', detach=True, privileged=True, ports=ports, environment=environment)
+    container = docker_client.containers.run('budtmo/docker-android-x86-12.0', name=name, detach=True, privileged=True, ports=ports, environment=environment)
         
     # wait for container to get an IP Address
     while container.attrs['NetworkSettings']['IPAddress'] == '':
@@ -32,7 +32,7 @@ def emulate_new_device():
         container.reload()
 
     # wait for device to boot
-    sleep(30)
+    sleep(15)
 
     # connect to new device
     adb_client.remote_connect(container.attrs['NetworkSettings']['IPAddress'], 5555)

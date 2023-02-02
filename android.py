@@ -45,6 +45,10 @@ class Android:
         soup = BeautifulSoup(self.get_xml(), 'xml')
         return soup.find('node', attrs=attrs)
 
+    def find_elements(self, attrs):
+        soup = BeautifulSoup(self.get_xml(), 'xml')
+        return soup.find_all('node', attrs=attrs)
+
     def get_coordinates(self, node):
         # grab bounding box of node
         bounds = node['bounds']
@@ -73,8 +77,16 @@ class Android:
         self.__device.shell(f'monkey -p {package_name} 1')
 
     def kill_app(self, package_name):
-        self.__device.shell(f'am force-stop {package_name}')        
+        self.__device.shell(f'am force-stop {package_name}')
 
-    def shutdown(self):
+    def set_keyboard(self, package_name):
+        self.__device.shell(f'settings put secure default_input_method {package_name}')
+        self.__device.shell(f'ime enable {package_name}')
+        self.__device.shell(f'ime set {package_name}')
+
+    def destroy(self):
         self.__container.kill()
         self.__container.remove()
+
+    def shutdown(self):
+        self.__container.stop()

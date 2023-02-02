@@ -1,194 +1,185 @@
+from argparse import ArgumentParser
+from random import randint
 from time import sleep
+import util
 from emulator import emulate_new_device, get_connected_devices
-import xml.etree.ElementTree as ET
-from collections import defaultdict
+from collections import namedtuple
+import screens
+import os
 import pandas as pd
 
-def init_device(device):
+def parse_args():
+    args = ArgumentParser()
+    args.add_argument('--query', default='cricket')
+    return args.parse_args()
 
-    # install tiktok apk
-    #device.install_apk('/home/hadi/Desktop/TikTok-Emulator/tiktok.apk')
+def generate_credentials(q):
+    credentials = namedtuple('Credentials', ['name', 'email', 'password'])
+    return credentials(
+        name='%s-%s' % (q, randint(10000, 99999)),
+        email=util.generate_email(),
+        password=util.generate_password()
+    )
 
-    # launch tiktok app
+def install_apks(device):
+    for apk in os.listdir('apks'):
+        device.install_apk(os.path.join('apks', apk))
+
+def configure_keyboard(device):
+    device.set_keyboard('io.github.visnkmr.nokeyboard/.IMEService')
+
+def restart_app(device):
     device.kill_app('com.ss.android.ugc.trill')
     device.launch_app('com.ss.android.ugc.trill')
-
-    # wait for app to load
     sleep(5)
 
-    return device
+def signup_controller(device, credentials):
+    while True:
+        xml = device.get_xml()
+        if "Don’t have an account? Sign up" in xml:
+            screens.signup_screen(device)
+        elif "When’s your birthday?" in xml:
+            screens.date_of_birth_screen(device, 'Next')
+        elif "When’s your birthdate?" in xml:
+            screens.date_of_birth_screen(device, 'Continue')
+        elif "Too many attempts. Try again later." in xml:
+                restart_app(device)
+        elif 'text="Email"' in xml:
+            if "Enter a valid email address" in xml:
+                restart_app(device)
+            else:
+                screens.email_screen(device, credentials.email)
+        elif "Verify to continue" in xml:
+            screens.captcha_screen(device)
+        elif "Agree and continue" in xml:
+            util.tap_on(device, attrs={'text': 'Agree and continue'})
+        elif "Create password" in xml:
+            screens.password_screen(device, credentials.password)
+        elif "Create nickname" in xml:
+            screens.nickname_screen(device)
+        elif "Choose your interests" in xml:
+            screens.interests_screen(device)
+        elif 'access your contacts?' in xml:
+            screens.permissions_screen(device)
+        elif xml == '' or 'Swipe up' in xml:
+            util.play_pause(device)
+            util.swipe_up(device)
+        elif 'Profile' in xml:
+            util.tap_on(device, attrs={'text': 'Profile'})
+            if 'Add bio' in xml:
+                print("Account created!")
+                break
+            elif 'Sign up for an account' in xml:
+                util.tap_on(device, attrs={'text': 'Sign up'})
 
+def train(device, query):
+    # click on search button
+    device.tap((1000, 120))
 
-def login(device, username, password):
+    # enter search query
+    device.type_text(18)
+    device.type_text(query)
 
-    # Click use phone/email button
-    elem = device.find_element({'text': 'Use phone / email / username'})
-    coords = device.get_coordinates(elem)
-    device.tap(coords)
+    # click search button
+    util.tap_on(device, attrs={'text': 'Search'})
 
-    sleep(3)
+    # click first video
+    util.tap_on(device, attrs={'resource-id': 'com.ss.android.ugc.trill:id/bc5'})
 
-    # Click email button
-    elem = device.find_element({'text': 'Email / Username'})
-    coords = device.get_coordinates(elem)
-    device.tap(coords)
+    # start training
+    training_data = []
+    for ind in range(5):
+        # watch short for a certain time
+        sleep(5)
 
+        # pause video
+        util.play_pause(device)
 
-    # Type in email and password
-    elem = device.find_element({'text': 'Email / Username'})
-    coords = device.get_coordinates(elem)
-    device.tap(coords)
-    device.type_text(username)
+        # click on see more to reveal content
+        try:
+            util.tap_on(device, {'text': 'See more'})
+        except:
+            pass
 
-    # Type in password
-    elem = device.find_element({'text': 'Password'})
-    coords = device.get_coordinates(elem)
-    device.tap(coords)
-    device.type_text(password)
-
-
-    # Login
-    elem = device.find_element({'text': 'Log in', 'resource-id': 'com.ss.android.ugc.trill:id/e1_'})
-    coords = device.get_coordinates(elem)
-    device.tap(coords)
-
-def swipe_up(device):
-    # swipe to next video
-    device.swipe((200, 500), (200, 0))
-
-def play_pause(device):
-    # pause video
-    device.tap((400, 400))
-
-# get physical device
-#device = emulate_new_device()
-device = get_connected_devices()[0]
-
-# # prep tiktok payload
-# init_device(device)
-
-# # click on search button
-# device.tap((1000, 120))
-
-# # # enter search query
-# device.type_text(18)
-# device.type_text('cricket')
-
-# # # click search button
-# elem = device.find_element(attrs={'text': 'Search'})
-# coords = device.get_coordinates(elem)
-# device.tap(coords)
-
-# # click first video
-# # elem = device.find_element(attrs={'resource-id': 'com.ss.android.ugc.trill:id/x1'})
-# # coords = device.get_coordinates(elem)
-# # device.tap(coords)
-
-# # problematic tap
-# # elem = device.find_element(attrs={'text': 'lakhan.singh007'})
-# # coords = device.get_coordinates(elem)
-# # print(coords)
-# sleep(5)
-# device.tap((250, 750))
-
-# Traindata=defaultdict(list)
-
-# desc_train=[]
-# username_train=[]
-
-
-# #Training
-# # swipe through videos
-# for i in range(100):
-#     print(i)
-#     # watch for 30s
-#     sleep(30)
-#     # pause video to grab xml
-#     # print('here')
-#     play_pause(device)
-
-#     sleep(5)
-    
-#     # check if see more exists
-#     elem = device.find_element(attrs={'text': 'See more'})
-#     if elem is not None:
-#         coords = device.get_coordinates(elem)
-#         device.tap(coords)
-
-#     elem = device.find_element(attrs={'content-desc': 'Like'})
-#     if elem is not None:
-#         print('liking')
-#         coords = device.get_coordinates(elem)
-#         device.tap(coords)
-
-#     # grab description here and reverse-google search
-#     try:
-#         xml = device.get_xml_file()
-#         tree=ET.parse(xml)
+        # send signal
+        util.tap_on(device, {'content-desc': 'Like'})
+        util.tap_on(device, {'resource-id': 'com.ss.android.ugc.trill:id/c0o'})
         
-#         for elem in tree.iter():
-#             dic=elem.attrib
+        # check if ok appears
+        try: util.tap_on(device, {'text': 'OK'})
+        except: pass
 
-            # if dic.get('text', '') != '':
-                # row[dic['resource-id']] = dic['text']
-#     except:
-#         play_pause(device)
-#         continue
-    
-#     # move to next video
-#     swipe_up(device)
+        # grab xml
+        text_elems = device.find_elements({'text': r'.+'})
 
-# print(desc_train)
-# print(username_train)
-
-# train_dict={'Usernames':username_train, 'Descriptions': desc_train}
-# df_train=pd.DataFrame.from_dict(train_dict)
-# df_train.to_csv("Training.csv")
-
-
-# device.kill_app('com.ss.android.ugc.trill')
-# device.launch_app('com.ss.android.ugc.trill')
-
-#Test
-
-Testdata=defaultdict(list)
-
-rows = []
-
-for i in range(50):
-    print(i)
-    sleep(1)
-    # pause video to grab xml
-    # print('here')
-    play_pause(device)
-    
-    # check if see more exists
-    elem = device.find_element(attrs={'text': 'See more'})
-    if elem is not None:
-        coords = device.get_coordinates(elem)
-        device.tap(coords)
-
-
-    # grab description here and reverse-google search
-    try:
-        xml = device.get_xml_file()
-        tree=ET.parse(xml)
+        # build row
         row = {}
+        for el in text_elems:
+            row[el['resource-id']] = el['text']
 
-        for elem in tree.iter():
-            dic=elem.attrib
-            if dic.get('text', '') != '':
-                row[dic['resource-id']] = dic['text']
+        # append to training data
+        training_data.append(row)
 
-        print(row)
-        rows.append(row)
-    except Exception as e:
-        print(e)
-        play_pause(device)
-        continue
+    return training_data
+
+
+def test(device, query):
+    restart_app(device)
+
+    # start training
+    testing_data = []
+    for ind in range(5):
+        # watch short for a certain time
+        sleep(5)
+
+        # pause video
+        util.play_pause(device)
+
+        # click on see more to reveal content
+        try:
+            util.tap_on(device, {'text': 'See more'})
+        except:
+            pass
+
+        # grab xml
+        text_elems = device.find_elements({'text': r'.+'})
+
+        # build row
+        row = {}
+        for el in text_elems:
+            row[el['resource-id']] = el['text']
+            # like video if it contains the query needed
+            row['liked'] = query in el['text']
+            if row['liked']:
+                util.tap_on(device, {'content-desc': 'Like'})
+
+        # append to training data
+        testing_data.append(row)
+
+    return testing_data
+
+
+if __name__ == '__main__':
+    args = parse_args()
+    credentials = generate_credentials(args.query)
+    print(credentials)
     
-    # move to next video
-    swipe_up(device)
+    device = emulate_new_device(credentials.name)
 
-df_test=pd.DataFrame(rows)
-df_test.to_csv("Testing-Haroon.csv")
+    print("VNC link:", device.get_vnc_link())
+    # device = get_connected_devices()[0]
+
+    install_apks(device)
+    configure_keyboard(device)
+    restart_app(device)
+
+    signup_controller(device, credentials)
+
+    training_data = train(device, args.query)
+    testing_data = test(device, args.query)
+
+    pd.DataFrame(training_data).to_csv(f'training/{credentials.name}.csv', index=False)
+    pd.DataFrame(testing_data).to_csv(f'testing/{credentials.name}.csv', index=False)
+    
+
+    device.shutdown()
