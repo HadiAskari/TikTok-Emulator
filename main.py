@@ -4,7 +4,7 @@ from emulator import emulate_new_device, get_connected_devices
 def init_device(device):
 
     # install tiktok apk
-    device.install_apk('/home/hadi/Desktop/TikTok-Emulator/tiktok.apk')
+    device.install_apk('/Users/vishnuv/Documents/Documents/Research/TikTok-Emulator/tiktok.apk')
 
     # launch tiktok app
     device.launch_app('com.ss.android.ugc.trill')
@@ -57,8 +57,8 @@ def play_pause(device):
     device.tap((300, 300))
 
 # get physical device
-#device = emulate_new_device()
-device = get_connected_devices()[0]
+device = emulate_new_device()
+#device = get_connected_devices()[0]
 
 # prep tiktok payload
 init_device(device)
