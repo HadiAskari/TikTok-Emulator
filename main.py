@@ -12,7 +12,7 @@ import re
 
 def parse_args():
     args = ArgumentParser()
-    args.add_argument('--query', default='cricket')
+    args.add_argument('--query', required=True)
     return args.parse_args()
 
 def generate_credentials(q):
