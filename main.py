@@ -26,7 +26,6 @@ def generate_credentials(q):
 def install_apks(device):
     for apk in os.listdir('apks'):
         if apk.endswith('.apk'):
-            print(os.path.join('apks', apk))
             device.install_apk(os.path.join('apks', apk))
 
 def configure_keyboard(device):
@@ -41,46 +40,62 @@ def signup_controller(device, credentials):
     while True:
         xml = device.get_xml()
         if "Don’t have an account? Sign up" in xml:
+            print("Signup screen. Proceeding.")
             screens.signup_screen(device)
         elif "When’s your birthday?" in xml:
+            print("Birthday screen. Waiting.")
             screens.date_of_birth_screen(device, 'Next')
         elif "When’s your birthdate?" in xml:
+            print("Birthday screen. Waiting.")
             screens.date_of_birth_screen(device, 'Continue')
         elif "Too many attempts. Try again later." in xml:
-                restart_app(device)
+            print("Too many attempts. Rebooting.")
+            restart_app(device)
         elif 'text="Email"' in xml:
+            print("Email screen. Entering email.")
             if "Enter a valid email address" in xml:
                 restart_app(device)
             else:
                 screens.email_screen(device, credentials.email)
         elif "Verify to continue" in xml:
+            print("Captcha screen. Waiting.")
             screens.captcha_screen(device)
         elif "Agree and continue" in xml:
+            print("Agree prompt. Agreeing.")
             util.tap_on(device, attrs={'text': 'Agree and continue'})
         elif "Create password" in xml:
+            print("Password screen. Entering password.")
             screens.password_screen(device, credentials.password)
         elif "Create nickname" in xml:
+            print("Nickname screen. Skipping.")
             screens.skip_screen(device)
         elif "Choose your interests" in xml:
+            print("Interests screen. Skipping.")
             screens.skip_screen(device)
         elif "Account Privacy" in xml and "Skip" in xml:
+            print("Account privacy screen. Skipping.")
             screens.skip_screen(device)
         elif "Enter phone number" in xml and "Skip" in xml:
+            print("Phone number screen. Skipping.")
             screens.skip_screen(device)
         elif "What languages" in xml and "Confirm" in xml:
+            print("Language prompt. Confirming.")
             screens.confirm_screen(device)
         elif "access your contacts?" in xml:
+            print("Permissions requested. Allowing.")
             screens.permissions_screen(device)
         elif xml == "" or "Swipe up" in xml:
             util.swipe_up(device)
             sleep(5)
             util.play_pause(device)
         elif "Profile" in xml:
+            print("Main app screen. Going to Profile.")
             util.tap_on(device, attrs={'text': "Profile"})
             if "Add bio" in xml or "Add friends" in xml:
-                print("Account created!")
+                print("Account signed-in! Quitting.")
                 break
             elif "Sign up for an account" in xml:
+                print("Signing up for account")
                 util.tap_on(device, attrs={'text': 'Sign up'})
 
 def train(device, query):
@@ -182,12 +197,14 @@ def test(device, query):
 if __name__ == '__main__':
     args = parse_args()
     
+    print("Generating credentials...")
     credentials = generate_credentials(args.query)
     with open(f'credentials/{credentials.name}', 'w') as f:
         json.dump(credentials, f)
         f.write('\n')
     print(credentials)
     
+    print("Launching emulator...")
     device = emulate_new_device(credentials.name)
     print("VNC link:", device.get_vnc_link())
 
