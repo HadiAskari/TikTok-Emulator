@@ -21,10 +21,33 @@ class Android:
         # extract element from page xml
         with open('xml/%s.xml' % out) as f:
             return f.read()
+
+    def get_xml_file(self):
+        # grab page xml
+        out = randint(10000, 99999)
+        self.__device.shell('uiautomator dump /sdcard/%s.xml' % out)
+        self.__device.pull('/sdcard/%s.xml' % out, 'xml/%s.xml' % out)
+        
+        # extract element from page xml
+        return 'xml/%s.xml' % out
+    
+    def get_xml_vid(self, run, reason):
+        # grab page xml
+        out = randint(10000, 99999)
+        self.__device.shell('uiautomator dump /sdcard/%s.xml' % out)
+        self.__device.pull('/sdcard/%s.xml' % out, 'xml/%s/%s/%s.xml' % (run,reason,out))
+        
+        # extract element from page xml
+        with open('xml/%s/%s/%s.xml' % (run,reason,out)) as f:
+            return f.read()
         
     def find_element(self, attrs):
         soup = BeautifulSoup(self.get_xml(), 'xml')
         return soup.find('node', attrs=attrs)
+
+    def find_elements(self, attrs):
+        soup = BeautifulSoup(self.get_xml(), 'xml')
+        return soup.find_all('node', attrs=attrs)
 
     def get_coordinates(self, node):
         # grab bounding box of node
@@ -53,6 +76,22 @@ class Android:
     def launch_app(self, package_name):
         self.__device.shell(f'monkey -p {package_name} 1')
 
-    def shutdown(self):
+    def kill_app(self, package_name):
+        self.__device.shell(f'am force-stop {package_name}')
+
+    def set_keyboard(self, package_name):
+        self.__device.shell(f'settings put secure default_input_method {package_name}')
+        self.__device.shell(f'ime enable {package_name}')
+        self.__device.shell(f'ime set {package_name}')
+
+    def destroy(self):
         self.__container.kill()
         self.__container.remove()
+
+    def shutdown(self):
+        self.__container.stop()
+
+    def screenshot(self, path):
+        result = self.__device.screencap()
+        with open(path, "wb") as fp:
+            fp.write(result)
