@@ -8,5 +8,5 @@ Install using `sudo apt install adb`.
 ### Libraries
 `pip install pure-python-adb docker beautifulsoup4`
 ## Running the emulator
-- Run using `python main.py`
+- Run using `python main.py --query <hashtag>`
 - The program will print a VNC link. Open that in your browser to view the screen.
