@@ -32,7 +32,7 @@ def emulate_new_device(name):
         container.reload()
 
     # wait for device to boot
-    sleep(60)
+    sleep(30)
 
     # connect to new device
     adb_client.remote_connect(container.attrs['NetworkSettings']['IPAddress'], 5555)
