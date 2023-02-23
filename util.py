@@ -24,9 +24,14 @@ def tap_on(device, attrs):
     coords = device.get_coordinates(elem)
     device.tap(coords)
 
+def tap_on_nth(device, attrs, n):
+    elem = device.find_elements(attrs=attrs)[n]
+    coords = device.get_coordinates(elem)
+    device.tap(coords)
+
+
 def lower_keyboard(device):
     device.type_text(111)
-
 
 def remove_emojis(data):
     emoj = re.compile("["

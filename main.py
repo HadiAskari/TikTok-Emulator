@@ -22,8 +22,8 @@ def generate_credentials(q):
     credentials = namedtuple('Credentials', ['name', 'email', 'password'])
     return credentials(
         name='%s-%s' % (q, randint(10000, 99999)),
-        email=util.generate_email(),
-        password=util.generate_password()
+        email='james_nuzum539@youtubeaudit.com',
+        password='@5bfec47e'
     )
 
 def install_apks(device):
@@ -100,6 +100,25 @@ def signup_controller(device, credentials):
             elif "Sign up for an account" in xml:
                 print("Signing up for account")
                 util.tap_on(device, attrs={'text': 'Sign up'})
+
+def login_controller(device, credentials):
+    while True:
+        xml = device.get_xml()
+        if "Log in to TikTok" in xml and "Use phone / email / username" in xml:
+            print("Login screen")
+            screens.login_screen(device, credentials)
+        elif 'text="Email / Username"' in xml:
+            print("Email screen. Entering email.")
+            screens.email_username_screen(device, credentials.email, credentials.password)
+        elif "Verify to continue" in xml:
+            print("Captcha screen. Waiting.")
+            screens.captcha_screen(device)
+        elif "Profile" in xml:
+            print("Main app screen. Going to Profile.")
+            util.tap_on(device, attrs={'text': "Profile"})
+            if "add bio" in xml or "Add bio" in xml or "Add friends" in xml or "Set up profile" in xml:
+                print("Account signed-in! Quitting.")
+                break
 
 def training_phase_1(device, query):
     restart_app(device)
@@ -201,11 +220,7 @@ def training_phase_2(device, query):
                     util.tap_on(device, {'content-desc': 'Like'})
                     util.tap_on(device, {'resource-id': 'com.ss.android.ugc.trill:id/c0o'})
                     sleep(10)
-                
-
-
-
-
+            
         # append to training data
         training_phase_2_data.append(row)
 
@@ -288,10 +303,6 @@ def Intervention(device, intervention):
                     # click on Not intereseted
                     util.tap_on(device, {'text': 'Not interested'})
                     sleep(10)
-                
-
-
-
 
         # append to training data
         intervention_data.append(row)
@@ -305,6 +316,7 @@ def Intervention(device, intervention):
 if __name__ == '__main__':
     args = parse_args()
     
+    classifier = pipeline("zero-shot-classification",model="facebook/bart-large-mnli")
     
     print("Generating credentials...")
     credentials = generate_credentials(args.q)
@@ -326,12 +338,12 @@ if __name__ == '__main__':
     print("Starting TikTok...")
     restart_app(device)
     
-    classifier = pipeline("zero-shot-classification",model="facebook/bart-large-mnli")
-    
-
     try:
-        print("Signing up...")
-        signup_controller(device, credentials)
+        # print("Signing up...")
+        # signup_controller(device, credentials)
+
+        print("Logging in")
+        login_controller(device, credentials)
 
         print("Training Phase 1...")
         training_data_phase1 = training_phase_1(device, args.q)
@@ -364,4 +376,4 @@ if __name__ == '__main__':
     except Exception as e:
         print(e)
         device.screenshot(f'screenshots/{credentials.name}.png')
-        device.destroy()
+        # device.destroy()
