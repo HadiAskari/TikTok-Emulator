@@ -4,7 +4,7 @@ from uuid import uuid4
 import re
 
 def generate_email():
-    domains = ['hotmail.com', 'gmail.com', 'yahoo.com', 'live.com']
+    domains = ['youtubeaudit.com']
     email = '%s_%s%s@%s' % (names.get_first_name(), names.get_last_name(), randint(1, 999), choice(domains))
     return email.lower()
 
