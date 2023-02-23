@@ -33,3 +33,13 @@ def confirm_screen(device):
 
 def permissions_screen(device):
     util.tap_on(device, {'text': "Allow"})
+
+def login_screen(device, credentials):
+    util.tap_on(device, {'text': "Use phone / email / username"})
+
+def email_username_screen(device, email, password):
+    util.tap_on(device, {'text': "Email / Username"})
+    device.type_text(email)
+    util.tap_on(device, {'text': 'Password'})
+    device.type_text(password)
+    util.tap_on_nth(device, {'text': 'Log in'}, 1)

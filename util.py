@@ -4,7 +4,7 @@ from uuid import uuid4
 import re
 
 def generate_email():
-    domains = ['hotmail.com', 'gmail.com', 'yahoo.com', 'live.com']
+    domains = ['youtubeaudit.com']
     email = '%s_%s%s@%s' % (names.get_first_name(), names.get_last_name(), randint(1, 999), choice(domains))
     return email.lower()
 
@@ -24,9 +24,14 @@ def tap_on(device, attrs):
     coords = device.get_coordinates(elem)
     device.tap(coords)
 
+def tap_on_nth(device, attrs, n):
+    elem = device.find_elements(attrs=attrs)[n]
+    coords = device.get_coordinates(elem)
+    device.tap(coords)
+
+
 def lower_keyboard(device):
     device.type_text(111)
-
 
 def remove_emojis(data):
     emoj = re.compile("["
