@@ -1,4 +1,5 @@
 from argparse import ArgumentParser
+import argparse
 from random import randint
 from time import sleep
 import util
@@ -13,7 +14,8 @@ from transformers import pipeline
 
 def parse_args():
     args = ArgumentParser()
-    args.add_argument('--query', required=True)
+    args.add_argument('--q', required=True)
+    args.add_argument('--i', help='Intervention Type', required=True)
     return args.parse_args()
 
 def generate_credentials(q):
@@ -35,7 +37,7 @@ def configure_keyboard(device):
 def restart_app(device):
     device.kill_app('com.ss.android.ugc.trill')
     device.launch_app('com.ss.android.ugc.trill')
-    sleep(10)
+    sleep(30)
 
 def signup_controller(device, credentials):
     while True:
@@ -99,7 +101,7 @@ def signup_controller(device, credentials):
                 print("Signing up for account")
                 util.tap_on(device, attrs={'text': 'Sign up'})
 
-def train(device, query):
+def training_phase_1(device, query):
     restart_app(device)
 
     # click on search button
@@ -116,7 +118,7 @@ def train(device, query):
     util.tap_on(device, attrs={'resource-id': 'com.ss.android.ugc.trill:id/bc5'})
 
     # start training
-    training_data = []
+    training_data_phase1 = []
     for ind in range(5):
         # watch short for a certain time
         sleep(5)
@@ -147,19 +149,19 @@ def train(device, query):
             row[el['resource-id']] = el['text']
 
         # append to training data
-        training_data.append(row)
+        training_data_phase1.append(row)
 
         # swipe to next video
         util.swipe_up(device)
 
-    return training_data
+    return training_data_phase1
 
 
-def test(device, query):
+def training_phase_2(device, query):
     restart_app(device)
 
     # start training
-    testing_data = []
+    training_phase_2_data = []
     for ind in range(5):
         # watch short for a certain time
         sleep(1)
@@ -205,19 +207,107 @@ def test(device, query):
 
 
         # append to training data
-        testing_data.append(row)
+        training_phase_2_data.append(row)
 
         # swipe to next
         util.swipe_up(device)
 
-    return testing_data
+    return training_phase_2_data
+
+#Also code "Cool Down Period Later"
+
+def testing(device):
+    restart_app(device)
+    testing_phase1_data = []
+    for ind in range(5):
+        # watch short for a certain time
+        sleep(1)
+
+        # pause video
+        util.play_pause(device)
+
+        # click on see more to reveal content
+        try: util.tap_on(device, {'text': 'See more'})
+        except: pass
+
+        # grab xml
+        text_elems = device.find_elements({'text': re.compile('.+')})
+
+        row = {}
+
+        # append to training data
+        testing_phase1_data.append(row)
+        util.swipe_up(device)
+
+        return testing_phase1_data
+
+def Intervention(device, intervention):
+    if intervention=="Not_Interested":
+        pass 
+    restart_app(device)
+    intervention_data = []
+    for ind in range(5):
+        # watch short for a certain time
+        sleep(1)
+
+        # pause video
+        util.play_pause(device)
+
+        # click on see more to reveal content
+        try: util.tap_on(device, {'text': 'See more'})
+        except: pass
+
+        # grab xml
+        text_elems = device.find_elements({'text': re.compile('.+')})
+
+        # build row
+        row = {}
+        options=[query,"Undefined"]
+        hypothesis_template = "The topic of this TikTok is {}."
+
+        for el in text_elems:
+            row[el['resource-id']] = el['text']
+            # like video if it contains the query needed
+            if el['resource-id']=='com.ss.android.ugc.trill:id/bc5':
+                try:
+                    text = util.remove_emojis(el['text'])
+                except:
+                    text="Unrecognized"
+                text = util.preprocess(text)
+                if text== "":
+                    text="Empty"
+
+                res=classifier(sequences=text, candidate_labels= options, hypothesis_template=hypothesis_template)
+
+                if res['scores'][0] > 0.5:
+                    row['Intervened'] = True
+                    row['Intervention']= intervention
+
+                    #longtap
+                    device.longtap()
+                    # click on Not intereseted
+                    util.tap_on(device, {'text': 'Not interested'})
+                    sleep(10)
+                
+
+
+
+
+        # append to training data
+        intervention_data.append(row)
+
+        # swipe to next
+        util.swipe_up(device)
+
+    return intervention_data
 
 
 if __name__ == '__main__':
     args = parse_args()
     
+    
     print("Generating credentials...")
-    credentials = generate_credentials(args.query)
+    credentials = generate_credentials(args.q)
     with open(f'credentials/{credentials.name}', 'w') as f:
         json.dump(credentials, f)
         f.write('\n')
@@ -243,16 +333,32 @@ if __name__ == '__main__':
         print("Signing up...")
         signup_controller(device, credentials)
 
-        print("Training...")
-        training_data = train(device, args.query)
+        print("Training Phase 1...")
+        training_data_phase1 = training_phase_1(device, args.q)
 
-        print("Testing...")
-        testing_data = test(device, args.query)
-
-        print("Saving...")
-        pd.DataFrame(training_data).to_csv(f'training/{credentials.name}.csv', index=False)
-        pd.DataFrame(testing_data).to_csv(f'testing/{credentials.name}.csv', index=False)
+        print("Training Phase 2...")
+        training_phase_2_data = training_phase_2(device, args.q)
         
+        print("Testing Phase 1...")
+        testing_phase_1_data = testing(device)
+
+        print("Saving phase 1...")
+        pd.DataFrame(training_data_phase1).to_csv(f'training_phase_1/{credentials.name}.csv', index=False)
+        pd.DataFrame(training_phase_2_data).to_csv(f'training_phase_2/{credentials.name}.csv', index=False)
+        pd.DataFrame(testing_phase_1_data).to_csv(f'testing_phase_1/{credentials.name}.csv', index=False)
+        
+        print("Intervention... ")
+
+        intervention_data=Intervention(device, args.i)
+        
+        print("Testing Phase 2... ")
+        testing_phase_2_data = testing(device)
+
+        print("Saving phase 2...")
+        pd.DataFrame(intervention_data).to_csv(f'intervention/{credentials.name}.csv', index=False)
+        pd.DataFrame(testing_phase_2_data).to_csv(f'testing_phase_2/{credentials.name}.csv', index=False)
+
+
         print("Shutting down...")
         device.shutdown()
     except Exception as e:

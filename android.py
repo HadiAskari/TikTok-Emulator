@@ -59,6 +59,10 @@ class Android:
         # tap a certain coordinate
         self.__device.shell('input tap %d %d' % coords)
 
+    def longtap(self):
+        #long tap a certain coordinate
+        self.__device.shell('input touchscreen swipe 500 500 500 500 2000')
+
     def swipe(self, start, end):
         self.__device.shell('input swipe %s %s %s %s' % (start[0], start[1], end[0], end[1]))
 
