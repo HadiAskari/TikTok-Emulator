@@ -195,7 +195,8 @@ def training_phase_2(device, query):
 
                 res=classifier(sequences=text, candidate_labels= options, hypothesis_template=hypothesis_template)
 
-                if res['scores'][0] > 0.5:
+                if res['scores'][0] > 0.8:
+                    print(res['scores'][0])
                     row['liked'] = True
                     # click on like and watch for longer
                     util.tap_on(device, {'content-desc': 'Like'})
@@ -241,7 +242,7 @@ def testing(device):
 
         return testing_phase1_data
 
-def Intervention(device, intervention):
+def Intervention(device,query, intervention):
     if intervention=="Not_Interested":
         pass 
     restart_app(device)
@@ -330,9 +331,10 @@ if __name__ == '__main__':
     
 
     try:
-        print("Signing up...")
-        signup_controller(device, credentials)
-
+        # print("Signing up...")
+        # signup_controller(device, credentials)
+        print("Wait for LogIn")
+        input()
         print("Training Phase 1...")
         training_data_phase1 = training_phase_1(device, args.q)
 
@@ -349,7 +351,7 @@ if __name__ == '__main__':
         
         print("Intervention... ")
 
-        intervention_data=Intervention(device, args.i)
+        intervention_data=Intervention(device,args.q, args.i)
         
         print("Testing Phase 2... ")
         testing_phase_2_data = testing(device)
@@ -364,4 +366,4 @@ if __name__ == '__main__':
     except Exception as e:
         print(e)
         device.screenshot(f'screenshots/{credentials.name}.png')
-        device.destroy()
+        #device.destroy()
