@@ -11,6 +11,17 @@ import pandas as pd
 import json
 import re
 from transformers import pipeline
+from tqdm.auto import tqdm
+from classifier import classify
+
+
+PARAMETERS = dict(
+    training_phase_n=25,
+    training_phase_sleep=30,
+    testing_phase_n=200,
+    intervention_phase_n=15
+)
+
 
 def parse_args():
     args = ArgumentParser()
@@ -21,14 +32,17 @@ def parse_args():
 def generate_credentials(q):
     credentials = namedtuple('Credentials', ['name', 'email', 'password'])
     return credentials(
-        name='%s-%s' % (q, randint(10000, 99999)),
-        email='alex_ruiz3011@youtubeaudit.com',
-        password='@5bfec47e'
+        name='%s' % randint(10000, 99999),
+        email='barbara_bergren118@youtubeaudit.com',
+        password='@7699cef4'
     )
 
 def install_apks(device):
     for apk in os.listdir('apks'):
-        if apk.endswith('.apk'):
+        if not apk.endswith('.apk'):
+            continue
+        package_name = apk[:-4]
+        if not device.is_installed(package_name):
             device.install_apk(os.path.join('apks', apk))
 
 def configure_keyboard(device):
@@ -37,7 +51,7 @@ def configure_keyboard(device):
 def restart_app(device):
     device.kill_app('com.ss.android.ugc.trill')
     device.launch_app('com.ss.android.ugc.trill')
-    sleep(30)
+    sleep(10)
 
 def signup_controller(device, credentials):
     while True:
@@ -61,8 +75,11 @@ def signup_controller(device, credentials):
             else:
                 screens.email_screen(device, credentials.email)
         elif "Verify to continue" in xml:
-            print("Captcha screen. Waiting.")
+            print("Captcha screen. Waiting for email.")
             screens.captcha_screen(device)
+        elif "Enter 6-digit code" in xml:
+            print("Code entry screen. Waiting.")
+            screens.code_entry_screen(device, credentials.email)
         elif "Agree and continue" in xml:
             print("Agree prompt. Agreeing.")
             util.tap_on(device, attrs={'text': 'Agree and continue'})
@@ -85,16 +102,16 @@ def signup_controller(device, credentials):
             print("Language prompt. Confirming.")
             screens.confirm_screen(device)
         elif "access your contacts?" in xml:
-            print("Permissions requested. Allowing.")
+            print("Permissions requested. Denying.")
             screens.permissions_screen(device)
         elif xml == "" or "Swipe up" in xml:
             util.swipe_up(device)
             sleep(5)
             util.play_pause(device)
-        elif "Profile" in xml:
+        elif "Profile" in xml and ("Discover" in xml or "Friends" in xml or "Inbox" in xml):
             print("Main app screen. Going to Profile.")
             util.tap_on(device, attrs={'text': "Profile"})
-            if "Add bio" in xml or "Add friends" in xml:
+            if "Add bio" in xml or "Add friends" in xml or 'add bio' in xml or "Complete your profile" in xml:
                 print("Account signed-in! Quitting.")
                 break
             elif "Sign up for an account" in xml:
@@ -116,6 +133,9 @@ def login_controller(device, credentials):
         elif "When’s your birthdate?" in xml:
             print("Birthday screen. Waiting.")
             screens.date_of_birth_screen(device, 'Continue')
+        elif "Choose your interests" in xml:
+            print("Interests screen. Skipping.")
+            screens.skip_screen(device)
         elif "What languages" in xml and "Confirm" in xml:
             print("Language prompt. Confirming.")
             screens.confirm_screen(device)
@@ -126,140 +146,124 @@ def login_controller(device, credentials):
             util.swipe_up(device)
             sleep(5)
             util.play_pause(device)
-        elif "Profile" in xml:
+        elif "Swipe up for more" in xml:
+            util.swipe_up(device)
+        elif "Profile" in xml and ("Discover" in xml or "Friends" in xml or "Inbox" in xml):
             print("Main app screen. Going to Profile.")
             util.tap_on(device, attrs={'text': "Profile"})
             if "add bio" in xml or "Add bio" in xml or "Add friends" in xml or "Set up profile" in xml:
                 print("Account signed-in! Quitting.")
                 break
 
-def training_phase_1(device, query):
-    try:
-        restart_app(device)
+# def training_phase_1(device, query):
+#     # start training
+#     restart_app(device)
+#     training_data_phase1 = []
 
-        # click on search button
-        device.tap((1000, 120))
+#     # click on search button
+#     device.tap((1000, 120))
+#     # device.tap((450, 50))
+#     sleep(1)
 
-        # enter search query
-        device.type_text(18)
-        device.type_text(query)
+#     # enter search query
+#     device.type_text(18)
+#     device.type_text(query)
 
-        # click search button
-        util.tap_on(device, attrs={'text': 'Search'})
+#     # click search button
+#     util.tap_on(device, attrs={'text': 'Search'})
+#     sleep(1)
 
-        # click first video
-        util.tap_on(device, attrs={'resource-id': 'com.ss.android.ugc.trill:id/bc5'})
+#     # click first video
+#     util.tap_on(device, attrs={'resource-id': 'com.ss.android.ugc.trill:id/bc5'})
 
-        # start training
-        training_data_phase1 = []
-        for ind in range(50):
-            # watch short for a certain time
-            sleep(30)
+#     for ind in tqdm(range(5)):
+#         # watch short for a certain time
+#         sleep(20)
 
-            # pause video
-            util.play_pause(device)
+#         # pause video
+#         util.play_pause(device)
 
-            # click on see more to reveal content
-            try:
-                util.tap_on(device, {'text': 'See more'})
-            except:
-                pass
+#         # get xml
+#         xml = device.get_xml()
 
-            # send signal
-            util.tap_on(device, {'content-desc': 'Like'})
-            util.tap_on(device, {'resource-id': 'com.ss.android.ugc.trill:id/c0o'})
-            
-            # check if ok appears
-            try: util.tap_on(device, {'text': 'OK'})
-            except: pass
+#         # send signal
+#         util.like_bookmark_subscribe(device, xml)
 
-            # grab xml
-            text_elems = device.find_elements({'text': re.compile('.+')})
+#         # click on see more to reveal content
+#         try: util.tap_on(device, {'text': 'See more'}, xml)
+#         except: pass
 
-            # build row
-            row = {}
-            for el in text_elems:
-                row[el['resource-id']] = el['text']
+#         # grab xml
+#         text_elems = device.find_elements({'text': re.compile('.+')}, xml)
 
-            # append to training data
-            training_data_phase1.append(row)
-            
-            # press on hide to hide content
-            try: util.tap_on(device, {'text': 'Hide'})
-            except: pass
+#         # build row
+#         row = {}
+#         for el in text_elems:
+#             row[el['resource-id']] = el['text']
+        
+#         # press on hide to hide content
+#         try: util.tap_on(device, {'text': 'Hide'})
+#         except: pass
 
-            # swipe to next video
-            util.swipe_up(device)
-    except Exception as e:
-        if e == "'NoneType' object is not subscriptable":
-            restart_app(device)
+#         # append to training data
+#         training_data_phase1.append(row)
 
-    return training_data_phase1
+#         # swipe to next video
+#         sleep(1)
+#         util.swipe_up(device)
+
+#     return training_data_phase1
 
 
 def training_phase_2(device, query):
-    try:
-        restart_app(device)
+    restart_app(device)
 
-        count=0
-        # start training
-        training_phase_2_data = []
-        while count<=25:
-            # watch short for a certain time
-            sleep(1)
+    count = 0
+    # start training
+    training_phase_2_data = []
+    while count <= PARAMETERS["training_phase_n"]:
 
-            # pause video
-            util.play_pause(device)
+        # check for any flow disruptions first
+        util.check_disruptions(device)
 
-            # click on see more to reveal content
-            try: util.tap_on(device, {'text': 'See more'})
-            except: pass
+        # pause video
+        util.play_pause(device)
 
-            # grab xml
-            text_elems = device.find_elements({'text': re.compile('.+')})
+        # click on see more to reveal content
+        try: util.tap_on(device, {'text': 'See more'})
+        except: pass
 
-            # build row
-            row = {}
-            options=[query,"Undefined"]
-            hypothesis_template = "The topic of this TikTok is {}."
+        # grab xml
+        text_elems = device.find_elements({'text': re.compile('.+')})
 
-            for el in text_elems:
-                row[el['resource-id']] = el['text']
-                # like video if it contains the query needed
-                if el['resource-id']=='com.ss.android.ugc.trill:id/bc5':
-                    try:
-                        text = util.remove_emojis(el['text'])
-                    except:
-                        text="Unrecognized"
-                    text = util.preprocess(text)
-                    if text== "":
-                        text="Empty"
+        # build row
+        row = {}
 
-                    res=classifier(sequences=text, candidate_labels= options, hypothesis_template=hypothesis_template)
+        for el in text_elems:
+            row[el['resource-id']] = el['text']
 
-                    if res['scores'][0] > 0.90:
-                        count+=1
-                        print(res['scores'][0])
-                        row['liked'] = True
-                        # click on like and watch for longer
-                        util.tap_on(device, {'content-desc': 'Like'})
-                        util.tap_on(device, {'resource-id': 'com.ss.android.ugc.trill:id/c0o'})
-                        util.play_pause(device)
-                        sleep(90)
-                
-            # append to training data
-            training_phase_2_data.append(row)
+            # like video if it contains the query needed
+            if el['resource-id'] == 'com.ss.android.ugc.trill:id/bc5':
+                text = el['text']
 
-            # press on hide to hide content
-            try: util.tap_on(device, {'text': 'Hide'})
-            except: pass
+                if classify(query, text):
+                    print(text)
+                    count += 1
+                    row['liked'] = True
+                    # click on like and watch for longer
+                    util.like_bookmark_subscribe(device)
+                    util.play_pause(device)
+                    sleep(PARAMETERS["training_phase_sleep"])
+            
+        # append to training data
+        training_phase_2_data.append(row)
 
-            # swipe to next
-            util.swipe_up(device)
-    except Exception as e:
-        if e == "'NoneType' object is not subscriptable":
-            restart_app(device)
+        # press on hide to hide content
+        try: util.tap_on(device, {'text': 'Hide'})
+        except: pass
 
+        # swipe to next
+        util.swipe_up(device)
     return training_phase_2_data
 
 #Also code "Cool Down Period Later"
@@ -268,7 +272,10 @@ def testing(device):
     try:
         restart_app(device)
         testing_phase1_data = []
-        for ind in range(1000):
+        for ind in range(PARAMETERS["testing_phase_n"]):
+            # check for any flow disruptions first
+            util.check_disruptions(device)
+            
             # watch short for a certain time
             sleep(1)
 
@@ -282,7 +289,10 @@ def testing(device):
             # grab xml
             text_elems = device.find_elements({'text': re.compile('.+')})
 
+            # grab text elements
             row = {}
+            for el in text_elems:
+                row[el['resource-id']] = el['text']
 
             # append to training data
             testing_phase1_data.append(row)
@@ -290,7 +300,6 @@ def testing(device):
             # press on hide to hide content
             try: util.tap_on(device, {'text': 'Hide'})
             except: pass
-
 
             util.swipe_up(device)
     except Exception as e:
@@ -303,10 +312,15 @@ def Intervention(device,query, intervention):
     try:
         if intervention=="Not_Interested":
             pass 
+        
         restart_app(device)
         intervention_data = []
-        count=0
-        while count <= 25:
+        count = 0
+        
+        while count <= PARAMETERS["intervention_phase_n"]:
+            # check for any flow disruptions first
+            util.check_disruptions(device)
+            
             # watch short for a certain time
             sleep(1)
 
@@ -322,38 +336,29 @@ def Intervention(device,query, intervention):
 
             # build row
             row = {}
-            options=[query,"Undefined"]
-            hypothesis_template = "The topic of this TikTok is {}."
 
             for el in text_elems:
+
                 row[el['resource-id']] = el['text']
+                
                 # like video if it contains the query needed
                 if el['resource-id']=='com.ss.android.ugc.trill:id/bc5':
-                    try:
-                        text = util.remove_emojis(el['text'])
-                    except:
-                        text="Unrecognized"
-                    text = util.preprocess(text)
-                    if text== "":
-                        text="Empty"
+                    text = el['text']
 
-                    res=classifier(sequences=text, candidate_labels= options, hypothesis_template=hypothesis_template)
-
-                    if res['scores'][0] > 0.90:
-                        count+=1
+                    if classify(query, text):
+                        count += 1
                         row['Intervened'] = True
-                        row['Intervention']= intervention
+                        row['Intervention'] = intervention
 
                         #longtap
                         device.longtap()
+
                         # click on Not intereseted
                         util.tap_on(device, {'text': 'Not interested'})
                         sleep(1)
                         
-
             # append to training data
             intervention_data.append(row)
-
 
             # press on hide to hide content
             try: util.tap_on(device, {'text': 'Hide'})
@@ -371,66 +376,76 @@ def Intervention(device,query, intervention):
 if __name__ == '__main__':
     args = parse_args()
     
-    classifier = pipeline("zero-shot-classification",model="facebook/bart-large-mnli")
-    
     print("Generating credentials...")
-    credentials = generate_credentials(args.q)
+    # credentials = generate_credentials(args.q)
+    credentials = generate_credentials(None)
     #credentials.name=credentials.name + "big_run"
-    print(credentials.name)
-    with open(f'credentials/{credentials.name}', 'w') as f:
-        json.dump(credentials, f)
-        f.write('\n')
-    print(credentials)
+    # print(credentials.name)
+    # with open(f'credentials/{credentials.name}', 'w') as f:
+        # json.dump(credentials, f)
+        # f.write('\n')
     
     print("Launching emulator...")
-    device = emulate_new_device(credentials.name)
-    print("VNC link:", device.get_vnc_link())
+    # device = emulate_new_device(credentials.name)
+    device = get_connected_devices()[0]
+    # print("VNC link:", device.get_vnc_link())
 
-    print("Installing APKs...")
-    install_apks(device)
 
-    print("Configuring keyboard...")
-    configure_keyboard(device)
-    
-    print("Starting TikTok...")
-    restart_app(device)
-    
     try:
+        print("Installing APKs...")
+        install_apks(device)
+
+        print("Configuring keyboard...")
+        configure_keyboard(device)
+        
+        # print("Starting TikTok...")
+        # restart_app(device)
+        
+        # try:
         # print("Signing up...")
         # signup_controller(device, credentials)
 
-        print("Logging in")
-        login_controller(device, credentials)
+        # with open('accounts.txt', 'a') as f:
+        #     f.write('\n%s,%s' % (credentials.email, credentials.password))
 
-        print("Training Phase 1...")
-        training_data_phase1 = training_phase_1(device, args.q)
+        # print("Logging in")
+        # login_controller(device, credentials)
 
-        print("Training Phase 2...")
+        # print("Training Phase 1...", util.timestamp())
+        # training_data_phase1 = training_phase_1(device, args.q)
+
+        print("Training Phase 2...", util.timestamp())
         training_phase_2_data = training_phase_2(device, args.q)
         
-        print("Testing Phase 1...")
+        print("Testing Phase 1...", util.timestamp())
         testing_phase_1_data = testing(device)
 
-        print("Saving phase 1...")
-        pd.DataFrame(training_data_phase1).to_csv(f'training_phase_1/{credentials.name}_big.csv', index=False)
-        pd.DataFrame(training_phase_2_data).to_csv(f'training_phase_2/{credentials.name}_big.csv', index=False)
-        pd.DataFrame(testing_phase_1_data).to_csv(f'testing_phase_1/{credentials.name}_big.csv', index=False)
+        print("Saving...", util.timestamp())
+        # pd.DataFrame(training_data_phase1).to_csv(f'training_phase_1/{credentials.name}_big.csv', index=False)
+        pd.DataFrame(training_phase_2_data).to_csv(f'training_phase_2/{args.q}_{credentials.name}.csv', index=False)
+        pd.DataFrame(testing_phase_1_data).to_csv(f'testing_phase_1/{args.q}_{credentials.name}.csv', index=False)
         
-        print("Intervention... ")
-
-        intervention_data=Intervention(device,args.q, args.i)
+        print("Intervention...", util.timestamp())
+        intervention_data = Intervention(device,args.q, args.i)
         
-        print("Testing Phase 2... ")
+        print("Testing Phase 2... ", util.timestamp())
         testing_phase_2_data = testing(device)
 
-        print("Saving phase 2...")
-        pd.DataFrame(intervention_data).to_csv(f'intervention/{credentials.name}_big.csv', index=False)
-        pd.DataFrame(testing_phase_2_data).to_csv(f'testing_phase_2/{credentials.name}_big.csv', index=False)
+        print("Saving...")
+        pd.DataFrame(intervention_data).to_csv(f'intervention/{args.q}_{credentials.name}.csv', index=False)
+        pd.DataFrame(testing_phase_2_data).to_csv(f'testing_phase_2/{args.q}_{credentials.name}.csv', index=False)
 
+        device.kill_app('com.ss.android.ugc.trill')
+        device.type_text(26)
 
-        print("Shutting down...")
-        device.shutdown()
     except Exception as e:
-        print(e)
         device.screenshot(f'screenshots/{credentials.name}.png')
+        # device.destroy()
+
+    # finally:
+        # pass
+        # device.destroy()
+    # except Exception as e:
+    #     print(e)
+    #     device.screenshot(f'screenshots/{credentials.name}.png')
         # device.destroy()

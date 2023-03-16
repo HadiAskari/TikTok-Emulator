@@ -41,12 +41,14 @@ class Android:
         with open('xml/%s/%s/%s.xml' % (run,reason,out)) as f:
             return f.read()
         
-    def find_element(self, attrs):
-        soup = BeautifulSoup(self.get_xml(), 'xml')
+    def find_element(self, attrs, xml=None):
+        xml = self.get_xml() if xml is None else xml
+        soup = BeautifulSoup(xml, 'xml')
         return soup.find('node', attrs=attrs)
 
-    def find_elements(self, attrs):
-        soup = BeautifulSoup(self.get_xml(), 'xml')
+    def find_elements(self, attrs, xml=None):
+        xml = self.get_xml() if xml is None else xml
+        soup = BeautifulSoup(xml, 'xml')
         return soup.find_all('node', attrs=attrs)
 
     def get_coordinates(self, node):
@@ -76,6 +78,9 @@ class Android:
 
     def install_apk(self, path_to_apk):
         self.__device.install(path_to_apk)
+
+    def is_installed(self, package_name):
+        return self.__device.is_installed(package_name)
 
     def launch_app(self, package_name):
         self.__device.shell(f'monkey -p {package_name} 1')
